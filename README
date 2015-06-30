@@ -1,0 +1,20 @@
+0. WHAT IS THIS?
+
+This is a set of shell utils that solve common problems.
+
+E.g.
+    - runall - runs a command in multiple hosts
+    - scpall - copies a file or a folder to multiple hosts
+    - cacheoutput - runs a command and stores its output as a cache (for a limited time) for future runs. It is designed for long-running commands that are ran frequently (e.g. a slow network connection) and may hang a server
+    - lockdir - is a folder based lock that is designed to prevent multiple concurrent runs as a semaphore. It can be configured to state how multiple runs are allowed
+    - sshblock - is a command to prevent ssh-probe attacks that blacklists those IP addresses that are trying multiple connections (tested in ubuntu-based systems)
+
+1. INSTALL
+
+Most utils are designed to be used as themselves. Only sshblock is designed to act as a resident application
+
+1.1 sshblock
+	You should the next line to the file /etc/hosts.deny
+		ALL:/etc/sshblock/blacklist
+	You must add the next line to the file /etc/hosts.allow
+		sshd:ALL EXCEPT /etc/sshblock/blacklist:spawn ( /usr/local/bin/sshblock -w /etc/sshblock/whitelist -l /var/log/auth -m 5 & )

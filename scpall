@@ -1,0 +1,95 @@
+#!/bin/bash
+# The MIT License (MIT)
+# 
+# Copyright (c) 2015 GRyCAP
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+function usage {
+    echo "* Copies one file to the set of hosts defined in the HOSTS variable declared in the /etc/runall/hosts file"
+    echo 
+    echo -e "\tusage: $0 [ -v ] [ -r ] [ -l ] <SRC> <DST>"
+    echo -e "\t-r\tverbose mode"
+    echo -e "\t-r\trecurse mode (scp -r)"
+    echo -e "\t-l\tcopies also to localhost"
+    echo -e "\t-h\tshows this help and exits"
+}
+if [ ! -e /etc/runall/hosts ]; then
+    echo "check that the file /etc/runall/hosts exists and sets the HOSTS variable"
+    exit -1
+fi
+source /etc/runall/hosts
+if [ "$HOSTS" == "" ]; then
+    echo "check that the file /etc/runall/hosts exists and sets the HOSTS variable"
+    exit -1
+fi
+
+COMMAND=
+LOCAL=0
+RECURSE=
+SRC=
+DST=
+USER=$(whoami)
+VERBOSE=0
+while [ $# -gt 0 ]; do
+	case $1 in
+		-h)	usage
+                        exit 0;;
+		-r)	RECURSE=-r
+			;;
+		-l|--localhost)
+			LOCAL=1
+			;;
+		-v)	VERBOSE=1
+			;;
+		*)
+			if [ "$SRC" = "" ]; then
+				SRC=$1
+				echo src
+			elif [ "$DST" = "" ]; then
+				DST=$1
+				echo dest
+			else
+				echo "error: parameter not expected"
+				exit
+			fi;;
+	esac
+	shift
+done
+
+if [ "$SRC" = "" ]; then
+	echo "no source path provided";
+	exit
+fi
+if [ "$DST" = "" ]; then
+	echo "no destination path provided";
+	exit
+fi
+
+LOCALHOST=$(hostname)
+
+echo "copying $SRC to $HOSTS at $DST"
+
+for h in $HOSTS; do
+	[ $VERBOSE == 1 ] && echo scp $RECURSE $SRC $USER@$h:$DST
+	scp $RECURSE $SRC $USER@$h:$DST
+done
+if [ $LOCAL == 1 ]; then
+	[ $VERBOSE == 1 ] && scp $RECURSE $SRC $USER@$HOSTS:$DST
+	scp $RECURSE $SRC $USER@$HOSTS:$DST
+fi

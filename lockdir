@@ -1,0 +1,97 @@
+#!/bin/bash
+# The MIT License (MIT)
+# 
+# Copyright (c) 2015 GRyCAP
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# The amount of parallel runs that are allowed (number of processes that will be allowed to get the lock)
+PARALLELRUNS=5
+
+# Maximum time (in seconds) that a process will wait to get the lock
+MAXWAIT=300
+
+# The log file (set to /dev/null if you do not want messages)
+LOGFILE=/tmp/lockrun.log
+
+# The path of the file that will be used to implement the run (it is suggested to use the /tmp path because it is usually flush on reboot)
+LOCKDIR=/tmp/lockrun.lock
+
+# ------------------------------
+# Please do not touch from here
+# ------------------------------
+
+__BEGINTIME=$(date +%s)
+__ELAPSEDTIME=0
+__ACQUIREDLOCK=
+
+function lock_log {
+    echo $(date +"%Y-%m-%d %H:%M:%S") [$$] $@ >> $LOGFILE
+}
+
+function clean_lock {
+    if [ "$__ACQUIREDLOCK" != "" ]; then
+        rm -rf "$__ACQUIREDLOCK"
+        lock_log "lock released $__ACQUIREDLOCK"
+    fi
+}
+
+trap clean_lock SIGHUP SIGINT SIGTERM SIGKILL EXIT
+
+function acquire_lock {
+    
+    while [ "$__ACQUIREDLOCK" == "" ] && [ $__ELAPSEDTIME -lt $MAXWAIT ]; do
+        # Try to create the folder that will be used as a lock
+        for i in $(seq 1 $PARALLELRUNS); do
+            mkdir $LOCKDIR.$i 2> /dev/null
+            RETVAL=$?
+            if [ $RETVAL == 0 ]; then
+                __ACQUIREDLOCK=$LOCKDIR.$i
+                break
+            fi
+        done
+
+        # If the folder could not be created, 
+        if [ "$__ACQUIREDLOCK" == "" ]; then
+            SLEEPTIME=$[ 5 + $(( $RANDOM % 10)) ]
+            sleep $SLEEPTIME
+            CURTIME=$(date +%s)
+            __ELAPSEDTIME=$[ $CURTIME - $__BEGINTIME ]
+            lock_log "could not acquire lock for $___ELAPSEDTIME seconds"
+        fi
+    done
+    
+    if [ "$__ACQUIREDLOCK" == "" ]; then
+        return 1
+    else
+        return 0
+    fi
+}    
+
+# How to use this script:
+#
+# acquire_lock
+# ACQUIRED=$?
+# 
+# if [ $ACQUIRED -ne 0 ]; then
+#    lock_log "could not acquire lock... dying"
+#else
+#    lock_log "lock acquired $LOCKFILE"
+#    sleep 10 # do the job
+#fi
