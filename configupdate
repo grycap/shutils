@@ -31,6 +31,7 @@ if __name__ == '__main__':
             Argument("config file", "name of the config file", mandatory = True, count = 1),
             Argument("new config file", "name of the file that contains the new values", mandatory = False, count = 1),
             Parameter("-n", "--new-file", "create a new file; otherwise is output to the standard output", mandatory = False, count = 1),
+            Parameter("-b", "--backup-file", "backup the current file into a new file and overwrite the original one", mandatory = False, count = 1),
             Flag("-c", "--clear-sections", desc = "sections that appear in the new config file are completely wiped in the config file, and only those new values will appear")
         ])
     
@@ -70,6 +71,14 @@ if __name__ == '__main__':
         
         for option in config1.options(section):
             config2.set(section, option, config1.get(section, option))
+
+    # This is to avoid the problem of the "[DEFAULT]" section that does not appear as-is in sections()
+    if len(config1._defaults) > 0:
+        if result.values['-c'] and (len(config2._defaults) > 0):
+            for k in config2._defaults.keys():
+                del config2._defaults[k]
+        for k,v in config1._defaults.items():
+            config2._defaults[k] = v
     
     if result.values['-n'] is None:
         config2.write(sys.stdout)
@@ -77,3 +86,12 @@ if __name__ == '__main__':
         fout = open(result.values['-n'][0], "wt")
         config2.write(fout)
         fout.close()
+        
+    if result.values['-b'] is None:
+        pass
+    else:
+        import shutil
+        shutil.copyfile(result.values['config file'][0], result.values['-b'][0])
+        fout = open(result.values['config file'][0], "wt")
+        config2.write(fout)
+        fout.close()        
