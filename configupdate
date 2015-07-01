@@ -21,7 +21,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import sys
-import sys
 import ConfigParser
 import io
 import os
@@ -31,7 +30,8 @@ if __name__ == '__main__':
     p = CmdLineParser("configupd", desc = "This command updates a config file with the values that are in other file (or that come from the standard input)", arguments = [
             Argument("config file", "name of the config file", mandatory = True, count = 1),
             Argument("new config file", "name of the file that contains the new values", mandatory = False, count = 1),
-            Parameter("-n", "--new-file", "create a new file; otherwise is output to the standard output", mandatory = False, count = 1)
+            Parameter("-n", "--new-file", "create a new file; otherwise is output to the standard output", mandatory = False, count = 1),
+            Flag("-c", "--clear-sections", desc = "sections that appear in the new config file are completely wiped in the config file, and only those new values will appear")
         ])
     
     parsed, result, info = p.parse(sys.argv[1:])
@@ -61,6 +61,10 @@ if __name__ == '__main__':
         raise Exception("file %s does not exist" % result.values['config file'][0])
     
     for section in config1.sections():
+        if result.values['-c'] and (section in config2.sections()):
+            for option in config2.options(section):
+                config2.remove_option(section, option)
+        
         if section not in config2.sections():
             config2.add_section(section)
         

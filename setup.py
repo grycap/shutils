@@ -8,7 +8,7 @@ ldesc = f.read()
 f.close()
 
 setup(name='shutils',
-      version="0.1",
+      version="0.1.1",
       description='Common SHell Utils', 
       author='Carlos de Alfonso',
       author_email='caralla@upv.es',
@@ -22,7 +22,7 @@ setup(name='shutils',
             'etc/sshblock/whitelist',
             ] ),
         ],
-      scripts = [ 'runall', 'scpall', 'lockdir', 'sshblock', 'cacheoutput' ],
+      scripts = [ 'runall', 'scpall', 'lockdir', 'sshblock', 'cacheoutput', "configupdate" ],
       long_description=ldesc,
       license = "MIT",
 )
