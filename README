@@ -18,3 +18,6 @@ Most utils are designed to be used as themselves. Only sshblock is designed to a
 		ALL:/etc/sshblock/blacklist
 	You must add the next line to the file /etc/hosts.allow
 		sshd:ALL EXCEPT /etc/sshblock/blacklist:spawn ( /usr/local/bin/sshblock -w /etc/sshblock/whitelist -l /var/log/auth -m 5 & )
+1.2 updateconfig
+
+	If you plan to install updateconfig to update config files, you need to install the cpyutils library. Please follow the instructions at https://github.com/grycap/cpyutils
