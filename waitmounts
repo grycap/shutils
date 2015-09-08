@@ -1,0 +1,80 @@
+#!/bin/bash
+# The MIT License (MIT)
+# 
+# Copyright (c) 2015 GRyCAP
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+WAITMOUNTS_FILES=/etc/waitmounts
+RETRIES=10
+RETRY_TIME=30
+LOG=true
+
+function log {
+    if $LOG; then
+        echo $1
+    fi
+}
+
+function mount() {
+	MOUNTPOINT=$1
+	MOUNTS=0
+	while [ "$MOUNTS" != "1" ] && [ $RETRIES -gt 0 ]; do
+		timeout 10 /bin/mount $MOUNTPOINT 2> /dev/null
+		timeout 1 /bin/mount -o remount $MOUNTPOINT 2> /dev/null
+		MOUNTS=$(cat /proc/mounts | grep "$MOUNTPOINT " | wc -l)
+		if [ "$MOUNTS" != "1" ]; then
+			log "$MOUNTPOINT is not ready. Waiting for $RETRY_TIME seconds and will retry"
+			sleep ${RETRY_TIME}s
+
+		fi
+		RETRIES=$[ $RETRIES - 1 ]
+	done
+	if [ "$MOUNTS" == "1" ]; then
+		log "$MOUNTPOINT mounted"
+		return 0
+	fi
+	log "could not mount $MOUNTPOINT"
+	return 1
+}
+
+case $1 in
+	restart|start)
+	if [ -e "$WAITMOUNTS_FILES" ]; then
+		for mpoint in $(cat "$WAITMOUNTS_FILES" | sed 's/#.*$//g;/^[ \t]*$/d'); do
+			mount "$mpoint"
+			if [ $? -ne 0 ]; then 
+				logger -t "ERROR" -s "failed to mount $mpoint"
+			fi
+		done
+	else
+		logger -t "WARNING" -s "file $WAITMOUNTS_FILES does not exist"
+	fi
+	;;
+	stop)
+        if [ -e "$WAITMOUNTS_FILES" ]; then
+		for mpoint in $(cat "$WAITMOUNTS_FILES" | sed 's/#.*$//g;/^[ \t]*$/d'); do
+			umount "$mpoint"
+		done
+	fi
+	;;
+	*)
+	echo "usage $0 [start|restart|stop]"
+	exit -1;;
+esac
