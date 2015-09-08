@@ -73,7 +73,7 @@ function acquire_lock {
             sleep $SLEEPTIME
             CURTIME=$(date +%s)
             __ELAPSEDTIME=$[ $CURTIME - $__BEGINTIME ]
-            lock_log "could not acquire lock for $___ELAPSEDTIME seconds"
+            lock_log "could not acquire lock for $__ELAPSEDTIME seconds"
         fi
     done
     
