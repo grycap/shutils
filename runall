@@ -28,6 +28,7 @@ function usage {
     echo -e "\t-p\trun in parallel (does not wait for output)"
     echo -e "\t-l\trun the command in localhost"
     echo -e "\t-h\tshows this help and exits"
+    echo -e "\t-i\texpects input from the commandline (this flag is overriden if a command is present)"
 }
 if [ ! -e /etc/runall/hosts ]; then
     echo "check that the file /etc/runall/hosts exists and sets the HOSTS variable"
@@ -43,12 +44,14 @@ COMMAND=
 LOCAL=0
 VERBOSE=0
 PARALLEL=0
+STDIN=0
 while [ $# -gt 0 ]; do
 	case $1 in
 		-h)	usage
                         exit 0;;
 		-v)	VERBOSE=1;;
 		-p)	PARALLEL=1;;
+                -i)     STDIN=1;;
 		--)
 			shift
 			COMMAND=$@
@@ -63,6 +66,12 @@ while [ $# -gt 0 ]; do
 	esac
 	shift
 done
+
+if [ "$COMMAND" = "" ] && [ $STDIN -eq 1 ]; then
+    echo "Type a set of command and hit CTRL-D to issue them in the hosts"
+    COMMAND=$(cat)
+fi
+
 
 if [ "$COMMAND" = "" ]; then
 	echo "no command provided";
@@ -80,10 +89,18 @@ for h in $HOSTS; do
 		ssh $h "(${COMMAND}) &> $FILE" & disown
 	else
 		[ $VERBOSE == 1 ] && echo ssh $h $COMMAND
-		ssh $h $COMMAND 
+                ssh $h bash -s <<EOF101010
+export LANG=C
+export LC_ALL=C
+$COMMAND
+EOF101010
 	fi
 done
 if [ $LOCAL == 1 ]; then
 	[ $VERBOSE == 1 ] && echo ssh $LOCALHOST $COMMAND
-	ssh $LOCALHOST $COMMAND
+        ssh $LOCALHOST bash -s <<EOF101010
+export LANG=C
+export LC_ALL=C
+$COMMAND
+EOF101010
 fi
