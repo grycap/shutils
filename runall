@@ -29,6 +29,7 @@ function usage {
     echo -e "\t-l\trun the command in localhost"
     echo -e "\t-h\tshows this help and exits"
     echo -e "\t-i\texpects input from the commandline (this flag is overriden if a command is present)"
+    echo -e "\t-x\texcludes the nodes in the list"
 }
 if [ ! -e /etc/runall/hosts ]; then
     echo "check that the file /etc/runall/hosts exists and sets the HOSTS variable"
@@ -45,6 +46,7 @@ LOCAL=0
 VERBOSE=0
 PARALLEL=0
 STDIN=0
+EXCLUDELIST=
 while [ $# -gt 0 ]; do
 	case $1 in
 		-h)	usage
@@ -52,6 +54,9 @@ while [ $# -gt 0 ]; do
 		-v)	VERBOSE=1;;
 		-p)	PARALLEL=1;;
                 -i)     STDIN=1;;
+                -x)     [ $# -lt 2 ] && echo usage && exit 1
+			shift
+			EXCLUDELIST=$1;;
 		--)
 			shift
 			COMMAND=$@
@@ -66,6 +71,23 @@ while [ $# -gt 0 ]; do
 	esac
 	shift
 done
+
+if [ "$EXCLUDELIST" != "" ]; then
+	for h in $HOSTS; do
+		EXCLUDED="no"
+		for e in $EXCLUDELIST; do
+			if [ "$h" == "$e" ]; then
+				EXCLUDED="yes"
+			fi
+		done
+		if [ "$EXCLUDED" == "no" ]; then
+			NEWHOSTS="${NEWHOSTS}${h} "
+		else
+			[ "$VERBOSE" == "1" ] && echo "excluding $h"
+		fi
+	done
+	HOSTS="$NEWHOSTS"
+fi
 
 if [ "$COMMAND" = "" ] && [ $STDIN -eq 1 ]; then
     echo "Type a set of command and hit CTRL-D to issue them in the hosts"
